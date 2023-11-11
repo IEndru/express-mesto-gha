@@ -27,6 +27,10 @@ app.use((req, res, next) => {
 
 app.use(routes);
 
+app.use((req, res) => {
+  res.status(404).json({ message: 'Запрашиваемый ресурс не найден' });
+});
+
 app.listen(PORT, () => {
   console.log(`App listening on port ${PORT}`);
 });
