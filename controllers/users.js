@@ -39,7 +39,7 @@ const createUser = async (req, res) => {
   try {
     const { name, about, avatar } = req.body;
     const user = await User.create({ name, about, avatar });
-    res.send(user);
+    res.status(201).send(user);
   } catch (err) {
     if (err.name === 'ValidationError') {
       res.status(400).send({

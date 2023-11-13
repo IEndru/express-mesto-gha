@@ -3,12 +3,12 @@ const mongoose = require('mongoose');
 const helmet = require('helmet');
 const { routes } = require('./routes');
 
-const { PORT = 3000 } = process.env;
+const { PORT = 3000, DB_URL = 'mongodb://127.0.0.1:27017/mestodb' } = process.env;
 
 const app = express();
 
 // Подключение к MongoDB
-mongoose.connect('mongodb://127.0.0.1:27017/mestodb')
+mongoose.connect(DB_URL)
   .then(() => {
     console.log('Подключение к MongoDB успешно установлено');
   })
@@ -25,11 +25,8 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use(express.json());
 app.use(routes);
-
-app.use((req, res) => {
-  res.status(404).json({ message: 'Запрашиваемый ресурс не найден' });
-});
 
 app.listen(PORT, () => {
   console.log(`App listening on port ${PORT}`);
