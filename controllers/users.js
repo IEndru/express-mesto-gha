@@ -186,8 +186,13 @@ const getUserInfo = async (req, res, next) => {
         message: 'Пользователь не найден.',
       });
     }
-    res.send(user);
+    res.status(200).send(user);
   } catch (err) {
+    if (err.name === 'ValidationError' || err.name === 'CastError') {
+      return res.status(400).send({
+        message: 'Переданы некорректные данные',
+      });
+    }
     next(err);
   }
   return null;
