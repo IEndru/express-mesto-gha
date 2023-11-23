@@ -13,11 +13,19 @@ const getCards = async (req, res, next) => {
 const deleteCardById = async (req, res, next) => {
   try {
     const { cardId } = req.params;
-    const card = await Card.findByIdAndDelete(cardId);
+    const card = await Card.findByIdAndDelete(cardId).populate('owner');
     if (!card) {
       const err = new Error('Карточка с указанным _id не найдена.');
       err.name = 'NotFoundError';
       throw err;
+    }
+    const ownerId = card.owner.id;
+    const userId = req.user._id;
+    if (ownerId !== userId) {
+      res.status(403).send({
+        message: 'Нельзя удалить карточки других пользователей',
+      });
+      return;
     }
     res.send(card);
   } catch (err) {
