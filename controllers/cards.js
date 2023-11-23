@@ -1,25 +1,23 @@
 const { Card } = require('../models/card');
 
-const getCards = async (req, res) => {
+const getCards = async (req, res, next) => {
   try {
     const cards = await Card.find({});
     res.send(cards);
-  } catch (error) {
-    return res
-      .status(500)
-      .send({ message: 'Не получилось обработать запрос', error: error.message });
+  } catch (err) {
+    next(err);
   }
   return null;
 };
 
-const deleteCardById = async (req, res) => {
+const deleteCardById = async (req, res, next) => {
   try {
     const { cardId } = req.params;
     const card = await Card.findByIdAndDelete(cardId);
     if (!card) {
-      const error = new Error('Карточка с указанным _id не найдена.');
-      error.name = 'NotFoundError';
-      throw error;
+      const err = new Error('Карточка с указанным _id не найдена.');
+      err.name = 'NotFoundError';
+      throw err;
     }
     res.send(card);
   } catch (err) {
@@ -32,14 +30,12 @@ const deleteCardById = async (req, res) => {
         message: 'Передан некорректный _id карточки',
       });
     } else {
-      res.status(500).send({
-        message: 'Не получилось обработать запрос',
-      });
+      next(err);
     }
   }
 };
 
-const createCard = async (req, res) => {
+const createCard = async (req, res, next) => {
   try {
     const { name, link } = req.body;
     const ownerId = req.user._id;
@@ -51,14 +47,12 @@ const createCard = async (req, res) => {
         message: 'Переданы некорректные данные при создании карточки.',
       });
     } else {
-      res.status(500).send({
-        message: 'Не получилось обработать запрос',
-      });
+      next(err);
     }
   }
 };
 
-const dislikeCard = async (req, res) => {
+const dislikeCard = async (req, res, next) => {
   try {
     const userId = req.user._id;
     const card = await Card.findByIdAndUpdate(
@@ -79,14 +73,12 @@ const dislikeCard = async (req, res) => {
         message: 'Переданы некорректные данные',
       });
     } else {
-      res.status(500).send({
-        message: 'Не получилось обработать запрос',
-      });
+      next(err);
     }
   }
 };
 
-const likeCard = async (req, res) => {
+const likeCard = async (req, res, next) => {
   try {
     const userId = req.user._id;
     const card = await Card.findByIdAndUpdate(
@@ -107,9 +99,7 @@ const likeCard = async (req, res) => {
         message: 'Переданы некорректные данные',
       });
     } else {
-      res.status(500).send({
-        message: 'Не получилось обработать запрос',
-      });
+      next(err);
     }
   }
 };

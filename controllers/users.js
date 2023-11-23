@@ -1,18 +1,21 @@
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const { User } = require('../models/user');
+const { JWT_SECRET } = require('../utils/const');
 
-const getUsers = async (req, res) => {
+const SOLT_ROUNDS = 10;
+const MONGO_DUPLACATE_ERROR_CODE = 11000;
+
+const getUsers = async (req, res, next) => {
   try {
     const users = await User.find({});
     res.send(users);
   } catch (error) {
-    return res
-      .status(500)
-      .send({ message: 'Не получилось обработать запрос', error: error.message });
+    next(error);
   }
-  return null;
 };
 
-const getUserById = async (req, res) => {
+const getUserById = async (req, res, next) => {
   try {
     const { userId } = req.params;
     const user = await User.findById(userId);
@@ -30,30 +33,78 @@ const getUserById = async (req, res) => {
       return res.status(400).send({ message: 'Передан не валидный id' });
     }
 
-    return res.status(500).send({ message: 'Ошибка на стороне сервера' });
+    next(error);
   }
   return null;
 };
 
-const createUser = async (req, res) => {
+const createUser = async (req, res, next) => {
   try {
-    const { name, about, avatar } = req.body;
-    const user = await User.create({ name, about, avatar });
-    res.status(201).send(user);
+    const {
+      name,
+      about,
+      avatar,
+      email,
+      password,
+    } = req.body;
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(409).send({
+        message: 'Такой пользователь уже существует',
+      });
+    }
+    const hash = await bcrypt.hash(password, SOLT_ROUNDS);
+    const user = await User.create({
+      name,
+      about,
+      avatar,
+      email,
+      password: hash,
+    });
+    const userObject = user.toObject();
+    delete userObject.password;
+    res.status(201).send(userObject);
   } catch (err) {
+    if (err.code === MONGO_DUPLACATE_ERROR_CODE) {
+      return res.status(409).send({
+        message: 'Такой пользователь уже существует',
+        errorCode: err.code,
+      });
+    }
     if (err.name === 'ValidationError') {
       res.status(400).send({
         message: 'Переданы некорректные данные при создании пользователя',
       });
     } else {
-      res.status(500).send({
-        message: 'Ошибка по умолчанию.',
-      });
+      next(err);
     }
   }
+  return null;
 };
 
-const updateUser = async (req, res) => {
+const login = async (req, res, next) => {
+  const { email, password } = req.body;
+  try {
+    const user = await User.findOne({ email })
+      .select('+password')
+      .orFail(() => new Error('NotAutanticate'));
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(401).send({ message: 'Не правильные email или password' });
+    }
+    const token = jwt.sign({ _id: user._id }, JWT_SECRET, { expiresIn: '7d' });
+    res.status(200).json({ token });
+  } catch (error) {
+    if (error.message === 'NotAutanticate') {
+      return res
+        .status(401)
+        .send({ message: 'Не правильные email или password' });
+    }
+    next(error);
+  }
+  return null;
+};
+
+const updateUser = async (req, res, next) => {
   try {
     const userId = req.user._id;
     const { name, about } = req.body;
@@ -82,15 +133,13 @@ const updateUser = async (req, res) => {
         message: 'Переданы некорректные данные',
       });
     } else {
-      res.status(500).send({
-        message: 'Не получилось обработать запрос',
-      });
+      next(err);
     }
   }
   return null;
 };
 
-const updateAvatar = async (req, res) => {
+const updateAvatar = async (req, res, next) => {
   try {
     const userId = req.user._id;
     const { avatar } = req.body;
@@ -122,10 +171,24 @@ const updateAvatar = async (req, res) => {
         message: 'Переданы некорректные данные',
       });
     } else {
-      res.status(500).send({
-        message: 'Не получилось обработать запрос',
+      next(err);
+    }
+  }
+  return null;
+};
+
+const getUserInfo = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).send({
+        message: 'Пользователь не найден.',
       });
     }
+    res.send(user);
+  } catch (err) {
+    next(err);
   }
   return null;
 };
@@ -136,4 +199,6 @@ module.exports = {
   createUser,
   updateUser,
   updateAvatar,
+  login,
+  getUserInfo,
 };
