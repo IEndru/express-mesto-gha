@@ -3,8 +3,8 @@ const jwt = require('jsonwebtoken');
 const { User } = require('../models/user');
 const { JWT_SECRET } = require('../utils/const');
 
-const SOLT_ROUNDS = 10;
-const MONGO_DUPLACATE_ERROR_CODE = 11000;
+const SАLT_ROUNDS = 10;
+const MONGO_DUPLICATE_ERROR_CODE = 11000;
 
 const getUsers = async (req, res, next) => {
   try {
@@ -32,7 +32,6 @@ const getUserById = async (req, res, next) => {
     if (error.name === 'CastError') {
       return res.status(400).send({ message: 'Передан не валидный id' });
     }
-
     next(error);
   }
   return null;
@@ -53,7 +52,7 @@ const createUser = async (req, res, next) => {
         message: 'Такой пользователь уже существует',
       });
     }
-    const hash = await bcrypt.hash(password, SOLT_ROUNDS);
+    const hash = await bcrypt.hash(password, SАLT_ROUNDS);
     const user = await User.create({
       name,
       about,
@@ -65,19 +64,18 @@ const createUser = async (req, res, next) => {
     delete userObject.password;
     res.status(201).send(userObject);
   } catch (err) {
-    if (err.code === MONGO_DUPLACATE_ERROR_CODE) {
+    if (err.code === MONGO_DUPLICATE_ERROR_CODE) {
       return res.status(409).send({
         message: 'Такой пользователь уже существует',
         errorCode: err.code,
       });
     }
     if (err.name === 'ValidationError') {
-      res.status(400).send({
+      return res.status(400).send({
         message: 'Переданы некорректные данные при создании пользователя',
       });
-    } else {
-      next(err);
     }
+    next(err);
   }
   return null;
 };

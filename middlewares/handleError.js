@@ -5,8 +5,6 @@ function handleError(err, req, res, next) {
 
   if (statusCode === 500) {
     message = 'Ошибка на стороне сервера';
-  } else if (statusCode === 400) {
-    message = 'Пожалуйста, проверьте ваши данные.';
   }
 
   res.status(statusCode).send({ message });
