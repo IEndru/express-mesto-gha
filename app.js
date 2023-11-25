@@ -24,7 +24,6 @@ app.use(express.json());
 app.use(routes);
 
 app.use(errors());
-
 app.use(handleError);
 
 app.listen(PORT, () => {

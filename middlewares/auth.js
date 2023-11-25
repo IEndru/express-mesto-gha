@@ -12,8 +12,9 @@ function auth(req, res, next) {
       throw error;
     }
     const token = authorization.replace('Bearer ', '');
+    const secret = JWT_SECRET || 'default_secret';
     try {
-      payload = jwt.verify(token, JWT_SECRET);
+      payload = jwt.verify(token, secret);
     } catch (err) {
       const error = new Error('Невалидные почта или пароль');
       error.statusCode = 401;

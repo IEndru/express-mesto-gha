@@ -12,6 +12,7 @@ const {
 const userRouter = express.Router();
 
 userRouter.get('/', getUsers);
+userRouter.get('/me', getUserInfo);
 
 userRouter.get(
   '/:userId',
@@ -45,7 +46,5 @@ userRouter.patch(
   }),
   updateAvatar,
 );
-
-userRouter.get('/me', getUserInfo);
 
 module.exports = { userRouter };
