@@ -1,4 +1,7 @@
 const { Card } = require('../models/card');
+const ValidationError = require('../errors/ValidationError');
+const ForbiddenError = require('../errors/ForbiddenError');
+const NotFoundError = require('../errors/NotFoundError');
 
 const getCards = async (req, res, next) => {
   try {
@@ -13,33 +16,22 @@ const getCards = async (req, res, next) => {
 const deleteCardById = async (req, res, next) => {
   try {
     const { cardId } = req.params;
-    const card = await Card.findByIdAndDelete(cardId).populate('owner');
+    const card = await Card.findById(cardId).populate('owner');
     if (!card) {
-      const err = new Error('Карточка с указанным _id не найдена.');
-      err.name = 'NotFoundError';
-      throw err;
+      throw new NotFoundError('Карточка с указанным _id не найдена.');
     }
     const ownerId = card.owner.id;
     const userId = req.user._id;
     if (ownerId !== userId) {
-      res.status(403).send({
-        message: 'Нельзя удалить карточки других пользователей',
-      });
-      return;
+      throw new ForbiddenError('Нельзя удалить карточки других пользователей');
     }
+    await Card.findByIdAndRemove(cardId);
     res.send(card);
-  } catch (err) {
-    if (err.name === 'NotFoundError') {
-      res.status(404).send({
-        message: err.message,
-      });
-    } else if (err.name === 'CastError') {
-      res.status(400).send({
-        message: 'Передан некорректный _id карточки',
-      });
-    } else {
-      next(err);
+  } catch (error) {
+    if (error.name === 'ValidationError' || error.name === 'CastError') {
+      next(new ValidationError('Передан некорректный _id карточки'));
     }
+    next(error);
   }
 };
 
@@ -50,13 +42,10 @@ const createCard = async (req, res, next) => {
     const card = await Card.create({ name, link, owner: ownerId });
     res.status(201).send(card);
   } catch (err) {
-    if (err.name === 'ValidationError') {
-      res.status(400).send({
-        message: 'Переданы некорректные данные при создании карточки.',
-      });
-    } else {
-      next(err);
+    if (err.name === 'ValidationError' || err.name === 'CastError') {
+      next(new ValidationError('Переданы некорректные данные'));
     }
+    next(err);
   }
 };
 
@@ -69,20 +58,14 @@ const dislikeCard = async (req, res, next) => {
       { new: true },
     );
     if (!card) {
-      res.status(404).send({
-        message: 'Передан несуществующий _id карточки.',
-      });
-      return;
+      throw new NotFoundError('Передан несуществующий _id карточки');
     }
     res.send(card);
   } catch (err) {
-    if (err.name === 'CastError') {
-      res.status(400).send({
-        message: 'Переданы некорректные данные',
-      });
-    } else {
-      next(err);
+    if (err.name === 'ValidationError' || err.name === 'CastError') {
+      next(new ValidationError('Переданы некорректные данные'));
     }
+    next(err);
   }
 };
 
@@ -95,20 +78,14 @@ const likeCard = async (req, res, next) => {
       { new: true },
     );
     if (!card) {
-      res.status(404).send({
-        message: 'Передан несуществующий _id карточки.',
-      });
-      return;
+      throw new NotFoundError('Передан несуществующий _id карточки');
     }
     res.send(card);
   } catch (err) {
-    if (err.name === 'CastError') {
-      res.status(400).send({
-        message: 'Переданы некорректные данные',
-      });
-    } else {
-      next(err);
+    if (err.name === 'ValidationError' || err.name === 'CastError') {
+      next(new ValidationError('Переданы некорректные данные'));
     }
+    next(err);
   }
 };
 

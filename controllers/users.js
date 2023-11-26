@@ -2,6 +2,10 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { User } = require('../models/user');
 const { JWT_SECRET } = require('../utils/const');
+const ValidationError = require('../errors/ValidationError');
+const DuplicateError = require('../errors/DuplicateError');
+const NotFoundError = require('../errors/NotFoundError');
+const UnauthorizedError = require('../errors/UnauthorizedError');
 
 const SАLT_ROUNDS = 10;
 const MONGO_DUPLICATE_ERROR_CODE = 11000;
@@ -20,17 +24,12 @@ const getUserById = async (req, res, next) => {
     const { userId } = req.params;
     const user = await User.findById(userId);
     if (!user) {
-      throw new Error('NotFound');
+      throw new NotFoundError('Пользователь по указанному _id не найден.');
     }
     res.status(200).send(user);
   } catch (error) {
-    console.log(error);
-    if (error.message === 'NotFound') {
-      return res.status(404).send({ message: 'Пользователь по указанному _id не найден.' });
-    }
-
-    if (error.name === 'CastError') {
-      return res.status(400).send({ message: 'Передан не валидный id' });
+    if (error.name === 'ValidationError' || error.name === 'CastError') {
+      next(new ValidationError('Переданы некорректные данные'));
     }
     next(error);
   }
@@ -65,15 +64,10 @@ const createUser = async (req, res, next) => {
     res.status(201).send(userObject);
   } catch (err) {
     if (err.code === MONGO_DUPLICATE_ERROR_CODE) {
-      return res.status(409).send({
-        message: 'Такой пользователь уже существует',
-        errorCode: err.code,
-      });
+      next(new DuplicateError('Такой пользователь уже существует'));
     }
     if (err.name === 'ValidationError') {
-      return res.status(400).send({
-        message: 'Переданы некорректные данные при создании пользователя',
-      });
+      next(new ValidationError('Переданы некорректные данные при создании пользователя'));
     }
     next(err);
   }
@@ -85,18 +79,13 @@ const login = async (req, res, next) => {
   try {
     const user = await User.findOne({ email })
       .select('+password')
-      .orFail(() => new Error('NotAutanticate'));
+      .orFail(() => new UnauthorizedError('Не правильные email или password'));
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).send({ message: 'Не правильные email или password' });
+      next(new UnauthorizedError('Не правильные email или password'));
     }
     const token = jwt.sign({ _id: user._id }, JWT_SECRET, { expiresIn: '7d' });
     res.status(200).json({ token });
   } catch (error) {
-    if (error.message === 'NotAutanticate') {
-      return res
-        .status(401)
-        .send({ message: 'Не правильные email или password' });
-    }
     next(error);
   }
   return null;
@@ -110,9 +99,7 @@ const updateUser = async (req, res, next) => {
     const isValidUpdate = Object.keys(req.body).every((key) => allowedKeys.includes(key));
 
     if (!isValidUpdate) {
-      return res.status(400).send({
-        message: 'Переданы некорректные данные при обновлении профиля.',
-      });
+      throw new ValidationError('Переданы некорректные данные при обновлении профиля.');
     }
     const user = await User.findByIdAndUpdate(
       userId,
@@ -120,19 +107,11 @@ const updateUser = async (req, res, next) => {
       { new: true, runValidators: true },
     );
     if (!user) {
-      return res.status(404).send({
-        message: 'Пользователь с указанным _id не найден.',
-      });
+      throw new NotFoundError('Пользователь с указанным _id не найден.');
     }
     res.send(user);
   } catch (err) {
-    if (err.name === 'ValidationError') {
-      res.status(400).send({
-        message: 'Переданы некорректные данные',
-      });
-    } else {
-      next(err);
-    }
+    next(err);
   }
   return null;
 };
@@ -145,9 +124,7 @@ const updateAvatar = async (req, res, next) => {
     const isValidUpdate = Object.keys(req.body).every((key) => allowedKeys.includes(key));
 
     if (!isValidUpdate) {
-      return res.status(400).send({
-        message: 'Переданы некорректные данные при обновлении аватара.',
-      });
+      throw new ValidationError('Переданы некорректные данные при обновлении аватара.');
     }
 
     const user = await User.findByIdAndUpdate(
@@ -157,20 +134,12 @@ const updateAvatar = async (req, res, next) => {
     );
 
     if (!user) {
-      return res.status(404).send({
-        message: 'Пользователь с указанным _id не найден.',
-      });
+      throw new NotFoundError('Пользователь с указанным _id не найден.');
     }
 
     res.send(user);
   } catch (err) {
-    if (err.name === 'ValidationError') {
-      res.status(400).send({
-        message: 'Переданы некорректные данные',
-      });
-    } else {
-      next(err);
-    }
+    next(err);
   }
   return null;
 };
@@ -181,16 +150,12 @@ const getUserInfo = async (req, res, next) => {
     console.log(userId);
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).send({
-        message: 'Пользователь не найден.',
-      });
+      throw new NotFoundError('Пользователь не найден');
     }
     res.status(200).send(user);
   } catch (err) {
     if (err.name === 'ValidationError' || err.name === 'CastError') {
-      return res.status(400).send({
-        message: 'Переданы некорректные данные',
-      });
+      next(new ValidationError('Переданы некорректные данные'));
     }
     next(err);
   }

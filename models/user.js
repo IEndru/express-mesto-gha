@@ -48,7 +48,6 @@ const userSchema = new mongoose.Schema(
         message: 'Поля password является обязательным',
       },
       select: false,
-      minlength: 8,
     },
   },
   { versionKey: false, timestamps: true },
