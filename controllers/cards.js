@@ -22,16 +22,15 @@ const deleteCardById = async (req, res, next) => {
     }
     const ownerId = card.owner.id;
     const userId = req.user._id;
+    console.log(ownerId);
+    console.log(userId);
     if (ownerId !== userId) {
       throw new ForbiddenError('Нельзя удалить карточки других пользователей');
     }
-    await Card.findByIdAndRemove(cardId);
-    res.send(card);
-  } catch (error) {
-    if (error.name === 'ValidationError' || error.name === 'CastError') {
-      next(new ValidationError('Передан некорректный _id карточки'));
-    }
-    next(error);
+    await Card.findByIdAndDelete(cardId);
+    res.status(204).send();
+  } catch (err) {
+    next(err);
   }
 };
 
