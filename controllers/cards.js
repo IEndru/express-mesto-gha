@@ -28,7 +28,7 @@ const deleteCardById = async (req, res, next) => {
       throw new ForbiddenError('Нельзя удалить карточки других пользователей');
     }
     await Card.findByIdAndDelete(cardId);
-    res.status(204).send();
+    res.send(card);
   } catch (err) {
     next(err);
   }
