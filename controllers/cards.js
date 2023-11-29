@@ -15,22 +15,19 @@ const getCards = async (req, res, next) => {
 
 const deleteCardById = async (req, res, next) => {
   try {
-    const { cardId } = req.params;
-    const card = await Card.findById(cardId).populate('owner');
-    if (!card) {
-      throw new NotFoundError('Карточка с указанным _id не найдена.');
+    const card = await Card.findById(req.params.cardId).orFail(() => {
+      throw new NotFoundError('Карточка с указанным id не найдена');
+    });
+    if (String(card.owner) !== String(req.user._id)) {
+      throw new ForbiddenError('Запрещено удалять чужую карточку');
     }
-    const ownerId = card.owner.id;
-    const userId = req.user._id;
-    console.log(ownerId);
-    console.log(userId);
-    if (ownerId !== userId) {
-      throw new ForbiddenError('Нельзя удалить карточки других пользователей');
-    }
-    await Card.findByIdAndDelete(cardId);
-    res.send(card);
+    const deletedCard = await Card.findByIdAndDelete(req.params.cardId);
+    return res.send({ card: deletedCard });
   } catch (err) {
-    next(err);
+    if (err.name === 'ValidationError' || err.name === 'CastError') {
+      next(new ValidationError('Переданы некорректные данные'));
+    }
+    return next(err);
   }
 };
 

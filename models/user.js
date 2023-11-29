@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { isEmail } = require('validator');
+const { RegExp } = require('../utils/const');
 
 const userSchema = new mongoose.Schema(
   {
@@ -20,7 +21,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       validate: {
         validator(v) {
-          return /^https?:\/\/(www\.)?[a-zA-Z0-9-._~:/?#[\]@!$&'()*+,;=]+#?$/.test(v);
+          return RegExp.test(v);
         },
         message: 'Невалидный формат URL',
       },
