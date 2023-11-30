@@ -30,10 +30,10 @@ const getUserById = async (req, res, next) => {
   } catch (error) {
     if (error.name === 'ValidationError' || error.name === 'CastError') {
       next(new ValidationError('Переданы некорректные данные'));
+      return;
     }
     next(error);
   }
-  return null;
 };
 
 const createUser = async (req, res, next) => {
@@ -65,9 +65,13 @@ const createUser = async (req, res, next) => {
   } catch (err) {
     if (err.code === MONGO_DUPLICATE_ERROR_CODE) {
       next(new DuplicateError('Такой пользователь уже существует'));
+      // eslint-disable-next-line consistent-return
+      return;
     }
     if (err.name === 'ValidationError') {
       next(new ValidationError('Переданы некорректные данные при создании пользователя'));
+      // eslint-disable-next-line consistent-return
+      return;
     }
     next(err);
   }
@@ -88,7 +92,6 @@ const login = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-  return null;
 };
 
 const updateUser = async (req, res, next) => {
@@ -113,7 +116,6 @@ const updateUser = async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-  return null;
 };
 
 const updateAvatar = async (req, res, next) => {
@@ -122,26 +124,21 @@ const updateAvatar = async (req, res, next) => {
     const { avatar } = req.body;
     const allowedKeys = ['avatar'];
     const isValidUpdate = Object.keys(req.body).every((key) => allowedKeys.includes(key));
-
     if (!isValidUpdate) {
       throw new ValidationError('Переданы некорректные данные при обновлении аватара.');
     }
-
     const user = await User.findByIdAndUpdate(
       userId,
       { avatar },
       { new: true },
     );
-
     if (!user) {
       throw new NotFoundError('Пользователь с указанным _id не найден.');
     }
-
     res.send(user);
   } catch (err) {
     next(err);
   }
-  return null;
 };
 
 const getUserInfo = async (req, res, next) => {
@@ -156,10 +153,10 @@ const getUserInfo = async (req, res, next) => {
   } catch (err) {
     if (err.name === 'ValidationError' || err.name === 'CastError') {
       next(new ValidationError('Переданы некорректные данные'));
+      return;
     }
     next(err);
   }
-  return null;
 };
 
 module.exports = {

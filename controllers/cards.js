@@ -10,7 +10,6 @@ const getCards = async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-  return null;
 };
 
 const deleteCardById = async (req, res, next) => {
@@ -21,14 +20,17 @@ const deleteCardById = async (req, res, next) => {
     if (String(card.owner) !== String(req.user._id)) {
       throw new ForbiddenError('Запрещено удалять чужую карточку');
     }
-    const deletedCard = await Card.findByIdAndDelete(req.params.cardId);
+    const deletedCard = await Card.deleteOne(card);
     return res.send({ card: deletedCard });
   } catch (err) {
     if (err.name === 'ValidationError' || err.name === 'CastError') {
       next(new ValidationError('Переданы некорректные данные'));
+      // eslint-disable-next-line consistent-return
+      return;
     }
-    return next(err);
+    next(err);
   }
+  return null;
 };
 
 const createCard = async (req, res, next) => {
@@ -40,6 +42,7 @@ const createCard = async (req, res, next) => {
   } catch (err) {
     if (err.name === 'ValidationError' || err.name === 'CastError') {
       next(new ValidationError('Переданы некорректные данные'));
+      return;
     }
     next(err);
   }
@@ -60,6 +63,7 @@ const dislikeCard = async (req, res, next) => {
   } catch (err) {
     if (err.name === 'ValidationError' || err.name === 'CastError') {
       next(new ValidationError('Переданы некорректные данные'));
+      return;
     }
     next(err);
   }
@@ -80,6 +84,7 @@ const likeCard = async (req, res, next) => {
   } catch (err) {
     if (err.name === 'ValidationError' || err.name === 'CastError') {
       next(new ValidationError('Переданы некорректные данные'));
+      return;
     }
     next(err);
   }
